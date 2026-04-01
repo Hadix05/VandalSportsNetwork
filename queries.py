@@ -1,7 +1,7 @@
 from db_python import connect_to_db
 
 def get_all_players():
-    cnx = connect_to_db
+    cnx = connect_to_db()
     cursor = cnx.cursor(dictionary=True)
 
     query = """
