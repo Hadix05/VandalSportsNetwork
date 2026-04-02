@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from queries import get_all_players
+from Python.queries import get_all_players
 
 app = Flask(__name__)
 

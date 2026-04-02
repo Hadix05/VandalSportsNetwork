@@ -1,4 +1,4 @@
-from db_python import connect_to_db
+from Python.db_python import connect_to_db
 
 def get_all_players():
     cnx = connect_to_db()
