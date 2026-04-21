@@ -1,0 +1,155 @@
+summary for Haddie:
+
+Built So Far:
+
+We have a fully working full-stack application connecting a MySQL database to a Python backend and a JavaScript frontend. The project models sports data as a graph database with nodes (entities like players, teams, and leagues) and edges (relationships between them). Query 1 (Teammate Network) is fully implemented and working end to end with a Cytoscape.js visualization. The database is populated with the full NBA Kaggle dataset.
+
+---
+
+**The Tech Stack**
+
+- **Database:** MySQL running through XAMPP
+- **Backend:** Python + FastAPI, run with `python -m uvicorn app:app --reload`
+- **Frontend:** A single `index.html` file served through XAMPP's Apache server
+- **Visualization:** Cytoscape.js (loaded from CDN, already implemented)
+- **Data:** Kaggle NBA players CSV (`nba_players.csv`)
+
+--------------------------------------------------------------------------
+
+**Database Schema**
+
+We have three tables. Run these SQL statements in phpMyAdmin to create them:
+
+```sql
+CREATE TABLE Nodes (
+    NodeID INT AUTO_INCREMENT PRIMARY KEY,
+    NodeType VARCHAR(50) NOT NULL,
+    Name VARCHAR(100),
+    Sport VARCHAR(50),
+    Position VARCHAR(50),
+    City VARCHAR(100),
+    Tier INT
+);
+
+CREATE TABLE Edges (
+    EdgeID INT AUTO_INCREMENT PRIMARY KEY,
+    SourceNodeID INT NOT NULL,
+    TargetNodeID INT NOT NULL,
+    EdgeType VARCHAR(50) NOT NULL,
+    StartYear INT,
+    EndYear INT,
+    FOREIGN KEY (SourceNodeID) REFERENCES Nodes(NodeID),
+    FOREIGN KEY (TargetNodeID) REFERENCES Nodes(NodeID)
+);
+
+CREATE TABLE GraphMembership (
+    GraphID INT NOT NULL,
+    NodeID INT NOT NULL,
+    GraphName VARCHAR(50),
+    PRIMARY KEY (GraphID, NodeID),
+    FOREIGN KEY (NodeID) REFERENCES Nodes(NodeID)
+);
+
+ALTER TABLE Nodes
+ADD COLUMN pts FLOAT,
+ADD COLUMN reb FLOAT,
+ADD COLUMN ast FLOAT;
+```
+
+**What each table does:**
+- **Nodes** stores every entity — players, teams, and leagues. Each node has a type, name, sport, and for players, stats (pts, reb, ast). The League node also has a Tier value (NBA = Tier 1).
+- **Edges** stores relationships between nodes. EdgeType can be `plays_for` (Player → Team), `competes_in` (Team → League), or `teammate_of` (Player ↔ Player).
+- **GraphMembership** maps nodes to graphs. GraphID 1 = NBA. This is how we support multiple sports as separate graphs.
+
+---
+
+**How the Database Was Populated**
+
+I just used a Kaggle NBA players CSV (`nba_players.csv`) and a Python import script (`import_nba.py`) that reads the CSV and inserts everything into the database in one go. Here is what the script does when you run it:
+
+1. Creates a League node for NBA with Tier = 1
+2. For each unique player in the CSV, creates a Player node with their name, sport (NBA), and stats (pts, reb, ast from the CSV)
+3. For each unique team abbreviation it encounters, creates a Team node and a `competes_in` edge connecting that team to the NBA league node
+4. Creates a `plays_for` edge from the player to their team
+5. Adds the player to GraphMembership under GraphID 1 (NBA)
+6. Commits everything in a single transaction at the end
+
+The script skips duplicate players (same player appearing in multiple seasons just gets one node for their first appearance in the CSV). The result is 2551 player nodes, 30 team nodes, 1 league node, and all corresponding edges.
+
+---
+
+**How to Get This Running on Your Computer**
+
+**Step 1 — Pull the latest code from Git**
+
+Open VS Code, open the project repo, and pull the latest changes. All the updated backend files (app.py, db_python.py, queries.py, import_nba.py) and the frontend (index.html) will be included.
+
+**Step 2 — Start XAMPP**
+
+Open the XAMPP Control Panel and start both **Apache** and **MySQL**. Both should turn green.
+
+**Step 3 — Create the database in phpMyAdmin**
+
+Go to `http://localhost/phpmyadmin` in your browser. On the left sidebar click **New**, name the database `sports-db`, and click Create. Then click the **SQL tab** and paste and run all the CREATE TABLE and ALTER TABLE statements listed above in the Database Schema section. Run them in the order listed.
+
+**Step 4 — Install Python dependencies**
+
+Open a terminal in VS Code and run:
+```
+python -m pip install mysql-connector-python fastapi uvicorn
+```
+
+**Step 5 — Run the import script**
+
+In the terminal, navigate to the Backend folder:
+```
+cd C:\xampp\htdocs\CS3600_DataBase_Project\Backend
+(this is my file structure for the project so thats why i specified cd into the write place, but if yours is differnt thats fine) 
+C:/xampp/htdocs/CS3600_DataBase_Project/
+    Backend/
+        app.py
+        db_python.py
+        queries.py
+        import_nba.py
+        nba_players.csv
+    Frontend/
+        index.html
+```
+Then run:
+```
+python import_nba.py
+```
+Wait for it to print `Done! Imported 2551 players, 30 teams.` — this means the database is fully populated.
+
+**Step 6 — Start the backend server**
+
+In the same terminal run:
+```
+python -m uvicorn app:app --reload
+```
+Leave this terminal open and running.
+
+**Step 7 — Open the frontend**
+
+In your browser go to:
+```
+http://localhost/CS3600_DataBase_Project/Frontend/index.html
+```
+You should see the SportGraph DB interface with the Players page showing 2551 players loaded and the Teammate Network page working with Cytoscape.js visualization.
+
+---
+
+**What's Already Working**
+
+- Full database schema with Nodes, Edges, and GraphMembership tables
+- Complete NBA dataset imported (2551 players, 30 teams, 1 league, all edges, player stats)
+- FastAPI backend with two working endpoints: `/players` returns all player nodes, `/teammates/{player_id}` returns all teammates of a given player
+- Frontend with four pages: Dashboard, Players (searchable table), Teammate Network (Cytoscape.js graph), and About
+- Query 1 (Teammate Network) fully implemented — select a player, see their teammate graph rendered visually
+
+**What Still Needs To Be Done**
+
+- **Query 2 — Performance Threshold Filter:** Find players whose career stats (pts, reb, or ast) exceed a value set by the user. The stats are now stored in the database (pts, reb, ast columns on the Nodes table), so this just needs a new backend endpoint in `queries.py` and `app.py`, and a new UI section in `index.html`.
+- **Query 3 — Top-League Influence Network:** Find players connected to those competing in Tier 1 leagues. The Tier attribute is already on the League node, so this also just needs a new query and frontend section.
+- **NFL and MLB data:** We planned to import NFL and MLB datasets as separate graphs (GraphID 2 and 3). This hasn't been started yet — it will need its own CSV datasets from Kaggle and its own import scripts similar to `import_nba.py`.
+- **Phase III demo** is April 21–23 and the report is due April 25. **Phase IV final demo** is May 5–7 via Zoom and the final report is due 24 hours before the demo.

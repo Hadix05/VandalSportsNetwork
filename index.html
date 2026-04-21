@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SportGraph DB</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f5;
+            color: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            font-size: 14px;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: 200px;
+            background: #fff;
+            border-right: 1px solid #e8e8e8;
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-brand {
+            padding: 1.4rem 1.2rem 1.2rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0.75rem;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: #666;
+            text-decoration: none;
+            margin-bottom: 2px;
+            transition: background 0.12s, color 0.12s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .nav-item.active {
+            background: #1a1a1a;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* ── MAIN ── */
+        .main {
+            margin-left: 200px;
+            flex: 1;
+            padding: 2.2rem 2.5rem;
+        }
+
+        /* ── PAGES ── */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ── TOPBAR ── */
+        .topbar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .topbar h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .topbar p {
+            font-size: 0.82rem;
+            color: #888;
+            margin-top: 3px;
+        }
+
+        .btn {
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        .btn.secondary {
+            background: #fff;
+            color: #1a1a1a;
+            border: 1px solid #e8e8e8;
+        }
+
+        .btn.secondary:hover {
+            background: #f5f5f5;
+        }
+
+        /* ── STAT CARDS ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 1.2rem 1.4rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 0.6rem;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            line-height: 1;
+        }
+
+        .stat-value.text {
+            font-size: 1rem;
+            font-weight: 500;
+            padding-top: 0.3rem;
+        }
+
+        .stat-sub {
+            font-size: 0.72rem;
+            color: #aaa;
+            margin-top: 0.3rem;
+        }
+
+        /* ── CARD ── */
+        .card {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.4rem;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        .card-header h2 {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        /* ── NAV CARDS (home) ── */
+        .nav-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-card {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 1.2rem 1.4rem;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .nav-card:hover {
+            border-color: #1a1a1a;
+        }
+
+        .nav-card-icon {
+            font-size: 20px;
+            margin-bottom: 0.6rem;
+        }
+
+        .nav-card h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .nav-card p {
+            font-size: 0.78rem;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        .nav-card .go {
+            font-size: 0.75rem;
+            color: #1a1a1a;
+            margin-top: 0.6rem;
+            font-weight: 500;
+        }
+
+        /* ── TABLE ── */
+        .table-wrap {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.83rem;
+        }
+
+        thead th {
+            background: #fafafa;
+            padding: 9px 16px;
+            text-align: left;
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: #888;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        tbody tr {
+            border-top: 1px solid #f0f0f0;
+            transition: background 0.1s;
+        }
+
+        tbody tr:hover {
+            background: #fafafa;
+        }
+
+        tbody td {
+            padding: 9px 16px;
+            color: #1a1a1a;
+        }
+
+        /* ── BADGE ── */
+        .badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 500;
+            padding: 0.2rem 0.55rem;
+            border-radius: 20px;
+            border: 1px solid #e8e8e8;
+            color: #555;
+        }
+
+        .badge-blue {
+            color: #1a5fa8;
+            border-color: #c6daf5;
+            background: #f0f6ff;
+        }
+
+        .badge-green {
+            color: #2d7a4f;
+            border-color: #c6e8d6;
+            background: #f0faf5;
+        }
+
+        .badge-gray {
+            color: #666;
+            border-color: #e8e8e8;
+            background: #fafafa;
+        }
+
+        .badge-amber {
+            color: #7a5c2d;
+            border-color: #e8d9c6;
+            background: #faf6f0;
+        }
+
+        /* ── SEARCH ROW ── */
+        .search-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1.25rem;
+            align-items: center;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            color: #1a1a1a;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            padding: 7px 11px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            border-color: #1a1a1a;
+        }
+
+        input[type="text"] {
+            flex: 1;
+        }
+
+        select {
+            min-width: 140px;
+        }
+
+        /* ── STATUS ── */
+        .status-bar {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #2d7a4f;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .dot.red {
+            background: #c0392b;
+        }
+
+        .dot.yellow {
+            background: #e6a817;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: #aaa;
+            font-size: 0.83rem;
+        }
+
+        /* ── GRAPH BOX ── */
+        #cy {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            width: 100%;
+            height: 480px;
+        }
+
+        /* ── ABOUT ── */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .about-block {
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 1.2rem 1.4rem;
+            margin-bottom: 1rem;
+        }
+
+        .about-block h4 {
+            font-size: 0.72rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .node-type-list {
+            list-style: none;
+        }
+
+        .node-type-list li {
+            font-size: 0.83rem;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .node-type-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* ── TWO COL ── */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 1rem;
+        }
+
+        @media (max-width: 860px) {
+            .sidebar {
+                display: none;
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .nav-cards {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+
+            .about-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">SportGraph DB</div>
+        <nav class="sidebar-nav">
+            <a class="nav-item active" onclick="showPage('home', this)">Dashboard</a>
+            <a class="nav-item" onclick="showPage('players', this)">Players</a>
+            <a class="nav-item" onclick="showPage('teammates', this)">Teammate Network</a>
+            <a class="nav-item" onclick="showPage('performance', this)">Performance Filter</a>
+            <a class="nav-item" onclick="showPage('influence', this)">Team Roster</a>
+            <a class="nav-item" onclick="showPage('about', this)">About</a>
+        </nav>
+    </aside>
+
+    <main class="main">
+
+        <!-- HOME -->
+        <div class="page active" id="page-home">
+            <div class="topbar">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Professional Athlete Database</p>
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Sports Covered</div>
+                    <div class="stat-value">3</div>
+                    <div class="stat-sub">NBA · NFL · MLB</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Node Types</div>
+                    <div class="stat-value">4</div>
+                    <div class="stat-sub">Player, Team, League, Season</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Queries</div>
+                    <div class="stat-value text">3 Total</div>
+                    <div class="stat-sub">1 implemented · 2 in progress</div>
+                </div>
+            </div>
+
+            <div class="nav-cards">
+                <div class="nav-card" onclick="showPage('players', document.querySelectorAll('.nav-item')[1])">
+                    <div class="nav-card-icon"></div>
+                    <h3>Player Browser</h3>
+                    <p>View and search all player nodes in the database.</p>
+                    <div class="go">Browse players →</div>
+                </div>
+                <div class="nav-card" onclick="showPage('teammates', document.querySelectorAll('.nav-item')[2])">
+                    <div class="nav-card-icon"></div>
+                    <h3>Teammate Network</h3>
+                    <p>Visualize a player's teammate graph with Cytoscape.js.</p>
+                    <div class="go">Explore graph →</div>
+                </div>
+                <div class="nav-card" onclick="showPage('about', document.querySelectorAll('.nav-item')[3])">
+                    <div class="nav-card-icon"></div>
+                    <h3>About</h3>
+                    <p>Node types, edge types, and the ER model.</p>
+                    <div class="go">View schema →</div>
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Queries</h2>
+                    </div>
+                    <div>
+                        <div
+                            style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.4rem;border-bottom:1px solid #f0f0f0;">
+                            <div>
+                                <div style="font-size:0.83rem;font-weight:500;">Query 1 — Teammate Network</div>
+                                <div style="font-size:0.75rem;color:#888;margin-top:2px;">Given a player, retrieve
+                                    everyone they've played with</div>
+                            </div>
+                            <span class="badge badge-green">Implemented</span>
+                        </div>
+                        <div
+                            style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.4rem;border-bottom:1px solid #f0f0f0;">
+                            <div>
+                                <div style="font-size:0.83rem;font-weight:500;">Query 2 — Performance Threshold Filter
+                                </div>
+                                <div style="font-size:0.75rem;color:#888;margin-top:2px;">Players whose career stats
+                                    exceed a set value</div>
+                            </div>
+                            <span class="badge badge-amber">In progress</span>
+                        </div>
+                        <div
+                            style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.4rem;">
+                            <div>
+                                <div style="font-size:0.83rem;font-weight:500;">Query 3 — Top-League Influence Network
+                                </div>
+                                <div style="font-size:0.75rem;color:#888;margin-top:2px;">Players connected to Tier 1
+                                    league competitors</div>
+                            </div>
+                            <span class="badge badge-amber">In progress</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Tech Stack</h2>
+                    </div>
+                    <div>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.4rem;border-bottom:1px solid #f0f0f0;">
+                            <span style="font-size:0.83rem;">Database</span><span class="badge badge-blue">MySQL</span>
+                        </div>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.4rem;border-bottom:1px solid #f0f0f0;">
+                            <span style="font-size:0.83rem;">Backend</span><span class="badge badge-blue">FastAPI +
+                                Python</span>
+                        </div>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.4rem;border-bottom:1px solid #f0f0f0;">
+                            <span style="font-size:0.83rem;">Frontend</span><span
+                                class="badge badge-gray">JavaScript</span>
+                        </div>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1.4rem;">
+                            <span style="font-size:0.83rem;">Visualization</span><span
+                                class="badge badge-green">Cytoscape.js</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PLAYERS -->
+        <div class="page" id="page-players">
+            <div class="topbar">
+                <div>
+                    <h1>Players</h1>
+                    <p>All players stored as nodes in the graph database</p>
+                </div>
+                <button class="btn" onclick="loadPlayers()">Refresh</button>
+            </div>
+
+            <div class="search-row">
+                <input type="text" id="player-search" placeholder="Search by name..." oninput="filterPlayers()" />
+                <select id="sport-filter" onchange="filterPlayers()">
+                    <option value="">All sports</option>
+                    <option value="NBA">NBA</option>
+                    <option value="NFL">NFL</option>
+                    <option value="MLB">MLB</option>
+                </select>
+            </div>
+
+            <div class="status-bar">
+                <span class="dot" id="players-dot"></span>
+                <span id="players-status">Loading...</span>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node ID</th>
+                            <th>Name</th>
+                            <th>Sport</th>
+                            <th>Position</th>
+                        </tr>
+                    </thead>
+                    <tbody id="players-tbody">
+                        <tr>
+                            <td colspan="4">
+                                <div class="empty-state">Loading players...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TEAMMATE NETWORK -->
+        <div class="page" id="page-teammates">
+            <div class="topbar">
+                <div>
+                    <h1>Teammate Network</h1>
+                    <p>Enter a player ID to visualize their teammate graph (Query 1)</p>
+                </div>
+            </div>
+
+            <div class="search-row">
+                <input type="text" id="tm-player-input" placeholder="Enter player name or ID..."
+                    style="max-width:320px;" />
+                <button class="btn" onclick="loadTeammates()">Load Graph</button>
+                <button class="btn secondary" onclick="clearGraph()">Clear</button>
+            </div>
+
+            <div class="status-bar">
+                <span class="dot yellow" id="tm-dot"></span>
+                <span id="tm-status">Enter a player to load their network</span>
+            </div>
+
+            <div id="cy"></div>
+
+            <div id="tm-list-wrap" style="margin-top:1.25rem;display:none;">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Node ID</th>
+                                <th>Teammate Name</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tm-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PERFORMANCE FILTER -->
+        <div class="page" id="page-performance">
+            <div class="topbar">
+                <div>
+                    <h1>Performance Filter</h1>
+                    <p>Find players whose stats exceed a threshold (Query 2)</p>
+                </div>
+            </div>
+            <div class="search-row">
+                <input type="number" id="min_pts" placeholder="Min PTS" value="0" min="0" step="0.1"
+                    style="width:120px;">
+                <input type="number" id="min_reb" placeholder="Min REB" value="0" min="0" step="0.1"
+                    style="width:120px;">
+                <input type="number" id="min_ast" placeholder="Min AST" value="0" min="0" step="0.1"
+                    style="width:120px;">
+                <button class="btn" onclick="runPerformanceFilter()">Filter Players</button>
+            </div>
+            <div class="status-bar">
+                <span class="dot yellow" id="perf-dot"></span>
+                <span id="perf-status">Set thresholds and click Filter Players</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node ID</th>
+                            <th>Name</th>
+                            <th>Sport</th>
+                            <th>PTS</th>
+                            <th>REB</th>
+                            <th>AST</th>
+                        </tr>
+                    </thead>
+                    <tbody id="perf-tbody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">Set thresholds above and click Filter Players</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TEAM ROSTER -->
+        <div class="page" id="page-influence">
+            <div class="topbar">
+                <div>
+                    <h1>Team Roster</h1>
+                    <p>Select a team to see all players connected to it (Query 3)</p>
+                </div>
+            </div>
+            <div class="search-row">
+                <select id="team-select" onchange="loadInfluence()">
+                    <option value="">Select a team...</option>
+                </select>
+            </div>
+            <div class="status-bar">
+                <span class="dot yellow" id="inf-dot"></span>
+                <span id="inf-status">Select a team to load its roster</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node ID</th>
+                            <th>Name</th>
+                            <th>Sport</th>
+                            <th>PTS</th>
+                            <th>REB</th>
+                            <th>AST</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inf-tbody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">Select a team above</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ABOUT -->
+        <div class="page" id="page-about">
+            <div class="topbar">
+                <div>
+                    <h1>About</h1>
+                    <p>Basic Structure</p>
+                </div>
+            </div>
+
+            <div class="about-grid">
+                <div class="about-block">
+                    <h4>Node Types</h4>
+                    <ul class="node-type-list">
+                        <li><span>Player</span><span class="badge badge-blue">entity</span></li>
+                        <li><span>Team</span><span class="badge badge-blue">entity</span></li>
+                        <li><span>League</span><span class="badge badge-green">entity</span></li>
+                        <li><span>Season</span><span class="badge badge-gray">entity</span></li>
+                    </ul>
+                </div>
+                <div class="about-block">
+                    <h4>Edge Types</h4>
+                    <ul class="node-type-list">
+                        <li><span>Plays-For</span><span style="font-size:0.75rem;color:#888;">Player → Team</span></li>
+                        <li><span>Teammate</span><span style="font-size:0.75rem;color:#888;">Player ↔ Player</span></li>
+                        <li><span>Competes-In</span><span style="font-size:0.75rem;color:#888;">Team → League</span>
+                        </li>
+                        <li><span>Participates-In</span><span style="font-size:0.75rem;color:#888;">Player/Team →
+                                Season</span></li>
+                    </ul>
+                </div>
+                <div class="about-block">
+                    <h4>Graphs</h4>
+                    <ul class="node-type-list">
+                        <li><span>NBA Graph</span><span class="badge badge-blue">Tier 1</span></li>
+                        <li><span>NFL Graph</span><span class="badge badge-blue">Tier 1</span></li>
+                        <li><span>MLB Graph</span><span class="badge badge-blue">Tier 1</span></li>
+                    </ul>
+                </div>
+                <div class="about-block">
+                    <h4>Authors</h4>
+                    <ul class="node-type-list">
+                        <li><span>Haddie Meyer</span><span
+                                style="font-size:0.75rem;color:#888;">meye4747@vandals.uidaho.edu</span></li>
+                        <li><span>Torry Chmelik</span><span
+                                style="font-size:0.75rem;color:#888;">chme6647@vandals.uidaho.edu</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="about-block">
+                <h4>Queries</h4>
+                <ul class="node-type-list">
+                    <li><span>Query 1 — Teammate Network</span><span class="badge badge-green">Implemented</span></li>
+                    <li><span>Query 2 — Performance Threshold Filter</span><span class="badge badge-amber">In
+                            progress</span></li>
+                    <li><span>Query 3 — Top-League Influence Network</span><span class="badge badge-amber">In
+                            progress</span></li>
+                </ul>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const API = "http://localhost:8000";
+        let allPlayers = [];
+
+        function showPage(name, clickedLink) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(a => a.classList.remove('active'));
+            document.getElementById('page-' + name).classList.add('active');
+            if (clickedLink) clickedLink.classList.add('active');
+            if (name === 'players') loadPlayers();
+            if (name === 'influence') loadTeamDropdown();
+        }
+
+        async function loadPlayers() {
+            setStatus('players', 'yellow', 'Fetching from API...');
+            try {
+                const res = await fetch(`${API}/players`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                allPlayers = await res.json();
+                setStatus('players', 'green', `${allPlayers.length} players loaded`);
+                renderPlayers(allPlayers);
+            } catch (e) {
+                setStatus('players', 'red', `Error: ${e.message} — is the backend running?`);
+                document.getElementById('players-tbody').innerHTML =
+                    `<tr><td colspan="4"><div class="empty-state">Could not connect to backend at ${API}</div></td></tr>`;
+            }
+        }
+
+        function renderPlayers(players) {
+            const tbody = document.getElementById('players-tbody');
+            if (!players.length) {
+                tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No players found</div></td></tr>`;
+                return;
+            }
+            tbody.innerHTML = players.map(p => `
+      <tr>
+        <td style="color:#aaa;font-size:0.75rem;">${p.NodeID ?? p.nodeid ?? '—'}</td>
+        <td style="font-weight:500;">${p.Name ?? p.name ?? '—'}</td>
+        <td>${p.Sport ? `<span class="badge badge-blue">${p.Sport}</span>` : '<span class="badge badge-gray">—</span>'}</td>
+        <td style="color:#888;">${p.Position ?? p.position ?? '—'}</td>
+      </tr>
+    `).join('');
+        }
+
+        function filterPlayers() {
+            const search = document.getElementById('player-search').value.toLowerCase();
+            const sport = document.getElementById('sport-filter').value;
+            const filtered = allPlayers.filter(p => {
+                const name = (p.Name ?? p.name ?? '').toLowerCase();
+                const playerSport = p.Sport ?? p.sport ?? '';
+                return name.includes(search) && (sport === '' || playerSport === sport);
+            });
+            renderPlayers(filtered);
+        }
+
+        async function loadTeammates() {
+            const val = document.getElementById('tm-player-input').value.trim();
+            if (!val) return;
+            setTmStatus('yellow', `Loading teammate network for player ${val}...`);
+            // Clear the cy div for fresh render
+            const cyDiv = document.getElementById('cy');
+            cyDiv.innerHTML = '';
+            try {
+                const res = await fetch(`${API}/teammates/${encodeURIComponent(val)}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const teammates = await res.json();
+                setTmStatus('green', `${teammates.length} teammates found`);
+                renderTeammateList(teammates, val);
+                renderCytoscape(teammates, val);
+            } catch (e) {
+                setTmStatus('red', `Error: ${e.message}`);
+                cyDiv.style.display = 'flex';
+                cyDiv.style.alignItems = 'center';
+                cyDiv.style.justifyContent = 'center';
+                cyDiv.textContent = 'Could not load graph — check backend connection';
+            }
+        }
+
+        function renderTeammateList(teammates, playerId) {
+            const wrap = document.getElementById('tm-list-wrap');
+            const tbody = document.getElementById('tm-tbody');
+            if (!teammates.length) { wrap.style.display = 'none'; return; }
+            wrap.style.display = 'block';
+            tbody.innerHTML = teammates.map(t => `
+      <tr>
+        <td style="color:#aaa;font-size:0.75rem;">${t.NodeID ?? t.nodeid ?? '—'}</td>
+        <td style="font-weight:500;">${t.Name ?? t.name ?? '—'}</td>
+      </tr>
+    `).join('');
+        }
+
+        function renderCytoscape(teammates, playerId) {
+            // Look up the center player's name from the already-loaded players list
+            const centerPlayer = allPlayers.find(p => (p.NodeID ?? p.nodeid) == playerId);
+            const centerName = centerPlayer ? (centerPlayer.Name ?? centerPlayer.name) : `Player ${playerId}`;
+
+            const nodes = [
+                { data: { id: `p${playerId}`, label: centerName, type: 'center' } },
+                ...teammates.map(t => ({
+                    data: {
+                        id: `p${t.NodeID ?? t.nodeid}`,
+                        label: t.Name ?? t.name,
+                        type: 'teammate'
+                    }
+                }))
+            ];
+
+            const edges = teammates.map(t => ({
+                data: {
+                    source: `p${playerId}`,
+                    target: `p${t.NodeID ?? t.nodeid}`
+                }
+            }));
+
+            cytoscape({
+                container: document.getElementById('cy'),
+                elements: { nodes, edges },
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': '#1a1a1a',
+                            'label': 'data(label)',
+                            'color': '#1a1a1a',
+                            'font-size': '10px',
+                            'text-valign': 'bottom',
+                            'text-margin-y': '4px',
+                            'width': '28px',
+                            'height': '28px',
+                            'font-family': 'Inter, sans-serif'
+                        }
+                    },
+                    {
+                        selector: 'node[type="center"]',
+                        style: {
+                            'background-color': '#1a5fa8',
+                            'width': '38px',
+                            'height': '38px',
+                            'font-weight': '600'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 1.5,
+                            'line-color': '#e8e8e8',
+                            'curve-style': 'bezier'
+                        }
+                    }
+                ],
+                layout: { name: 'cose', padding: 40, animate: true }
+            });
+        }
+
+        function clearGraph() {
+            document.getElementById('tm-player-input').value = '';
+            const cyDiv = document.getElementById('cy');
+            cyDiv.innerHTML = '';
+            cyDiv.style.display = '';
+            cyDiv.style.alignItems = '';
+            cyDiv.style.justifyContent = '';
+            document.getElementById('tm-list-wrap').style.display = 'none';
+            setTmStatus('yellow', 'Enter a player to load their network');
+        }
+
+        function setStatus(page, color, msg) {
+            document.getElementById(`${page}-dot`).className = `dot ${color === 'green' ? '' : color}`;
+            document.getElementById(`${page}-status`).textContent = msg;
+        }
+
+        function setTmStatus(color, msg) {
+            document.getElementById('tm-dot').className = `dot ${color === 'green' ? '' : color}`;
+            document.getElementById('tm-status').textContent = msg;
+        }
+
+        async function runPerformanceFilter() {
+            const pts = document.getElementById('min_pts').value || 0;
+            const reb = document.getElementById('min_reb').value || 0;
+            const ast = document.getElementById('min_ast').value || 0;
+
+            document.getElementById('perf-dot').className = 'dot yellow';
+            document.getElementById('perf-status').textContent = 'Fetching from API...';
+
+            try {
+                const res = await fetch(`${API}/players/filter?min_pts=${pts}&min_reb=${reb}&min_ast=${ast}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const players = await res.json();
+
+                document.getElementById('perf-dot').className = 'dot';
+                document.getElementById('perf-status').textContent = `${players.length} player(s) found`;
+
+                const tbody = document.getElementById('perf-tbody');
+                if (!players.length) {
+                    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No players match those thresholds</div></td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = players.map(p => `
+            <tr>
+                <td style="color:#aaa;font-size:0.75rem;">${p.NodeID ?? '—'}</td>
+                <td style="font-weight:500;">${p.Name ?? '—'}</td>
+                <td>${p.Sport ? `<span class="badge badge-blue">${p.Sport}</span>` : '—'}</td>
+                <td>${p.pts ?? '—'}</td>
+                <td>${p.reb ?? '—'}</td>
+                <td>${p.ast ?? '—'}</td>
+            </tr>
+        `).join('');
+            } catch (e) {
+                document.getElementById('perf-dot').className = 'dot red';
+                document.getElementById('perf-status').textContent = `Error: ${e.message}`;
+            }
+        }
+
+        async function loadTeamDropdown() {
+            try {
+                const res = await fetch(`${API}/teams`);
+                const teams = await res.json();
+                const select = document.getElementById('team-select');
+                teams.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.Name;
+                    opt.textContent = t.Name;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Could not load teams:', e);
+            }
+        }
+
+        async function loadInfluence() {
+            const team = document.getElementById('team-select').value;
+            if (!team) return;
+
+            document.getElementById('inf-dot').className = 'dot yellow';
+            document.getElementById('inf-status').textContent = `Loading roster for ${team}...`;
+
+            try {
+                const res = await fetch(`${API}/teams/${encodeURIComponent(team)}/players`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const players = await res.json();
+
+                document.getElementById('inf-dot').className = 'dot';
+                document.getElementById('inf-status').textContent = `${players.length} player(s) found for ${team}`;
+
+                const tbody = document.getElementById('inf-tbody');
+                if (!players.length) {
+                    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No players found for this team</div></td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = players.map(p => `
+            <tr>
+                <td style="color:#aaa;font-size:0.75rem;">${p.NodeID ?? '—'}</td>
+                <td style="font-weight:500;">${p.Name ?? '—'}</td>
+                <td>${p.Sport ? `<span class="badge badge-blue">${p.Sport}</span>` : '—'}</td>
+                <td>${p.pts ?? '—'}</td>
+                <td>${p.reb ?? '—'}</td>
+                <td>${p.ast ?? '—'}</td>
+            </tr>
+        `).join('');
+            } catch (e) {
+                document.getElementById('inf-dot').className = 'dot red';
+                document.getElementById('inf-status').textContent = `Error: ${e.message}`;
+            }
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,14 @@
+
+//this creates the relation edge in the phpMyAdmin table
+
+INSERT INTO edges (SourceNodeID, TargetNodeID, EdgeType)
+SELECT DISTINCT
+    e1.SourceNodeID,
+    e2.SourceNodeID,
+    'teammate_of'
+FROM edges e1
+JOIN edges e2
+    ON e1.TargetNodeID = e2.TargetNodeID
+    AND e1.SourceNodeID < e2.SourceNodeID
+WHERE e1.EdgeType = 'plays_for'
+  AND e2.EdgeType = 'plays_for';
