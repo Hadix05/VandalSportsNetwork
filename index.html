@@ -487,6 +487,8 @@
             <a class="nav-item active" onclick="showPage('home', this)">Dashboard</a>
             <a class="nav-item" onclick="showPage('players', this)">Players</a>
             <a class="nav-item" onclick="showPage('teammates', this)">Teammate Network</a>
+            <a class="nav-item" onclick="showPage('performance', this)">Performance Filter</a>
+            <a class="nav-item" onclick="showPage('influence', this)">Team Roster</a>
             <a class="nav-item" onclick="showPage('about', this)">About</a>
         </nav>
     </aside>
@@ -692,6 +694,90 @@
             </div>
         </div>
 
+        <!-- PERFORMANCE FILTER -->
+        <div class="page" id="page-performance">
+            <div class="topbar">
+                <div>
+                    <h1>Performance Filter</h1>
+                    <p>Find players whose stats exceed a threshold (Query 2)</p>
+                </div>
+            </div>
+            <div class="search-row">
+                <input type="number" id="min_pts" placeholder="Min PTS" value="0" min="0" step="0.1"
+                    style="width:120px;">
+                <input type="number" id="min_reb" placeholder="Min REB" value="0" min="0" step="0.1"
+                    style="width:120px;">
+                <input type="number" id="min_ast" placeholder="Min AST" value="0" min="0" step="0.1"
+                    style="width:120px;">
+                <button class="btn" onclick="runPerformanceFilter()">Filter Players</button>
+            </div>
+            <div class="status-bar">
+                <span class="dot yellow" id="perf-dot"></span>
+                <span id="perf-status">Set thresholds and click Filter Players</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node ID</th>
+                            <th>Name</th>
+                            <th>Sport</th>
+                            <th>PTS</th>
+                            <th>REB</th>
+                            <th>AST</th>
+                        </tr>
+                    </thead>
+                    <tbody id="perf-tbody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">Set thresholds above and click Filter Players</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TEAM ROSTER -->
+        <div class="page" id="page-influence">
+            <div class="topbar">
+                <div>
+                    <h1>Team Roster</h1>
+                    <p>Select a team to see all players connected to it (Query 3)</p>
+                </div>
+            </div>
+            <div class="search-row">
+                <select id="team-select" onchange="loadInfluence()">
+                    <option value="">Select a team...</option>
+                </select>
+            </div>
+            <div class="status-bar">
+                <span class="dot yellow" id="inf-dot"></span>
+                <span id="inf-status">Select a team to load its roster</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node ID</th>
+                            <th>Name</th>
+                            <th>Sport</th>
+                            <th>PTS</th>
+                            <th>REB</th>
+                            <th>AST</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inf-tbody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">Select a team above</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- ABOUT -->
         <div class="page" id="page-about">
             <div class="topbar">
@@ -765,6 +851,7 @@
             document.getElementById('page-' + name).classList.add('active');
             if (clickedLink) clickedLink.classList.add('active');
             if (name === 'players') loadPlayers();
+            if (name === 'influence') loadTeamDropdown();
         }
 
         async function loadPlayers() {
@@ -928,6 +1015,96 @@
             document.getElementById('tm-dot').className = `dot ${color === 'green' ? '' : color}`;
             document.getElementById('tm-status').textContent = msg;
         }
+
+        async function runPerformanceFilter() {
+            const pts = document.getElementById('min_pts').value || 0;
+            const reb = document.getElementById('min_reb').value || 0;
+            const ast = document.getElementById('min_ast').value || 0;
+
+            document.getElementById('perf-dot').className = 'dot yellow';
+            document.getElementById('perf-status').textContent = 'Fetching from API...';
+
+            try {
+                const res = await fetch(`${API}/players/filter?min_pts=${pts}&min_reb=${reb}&min_ast=${ast}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const players = await res.json();
+
+                document.getElementById('perf-dot').className = 'dot';
+                document.getElementById('perf-status').textContent = `${players.length} player(s) found`;
+
+                const tbody = document.getElementById('perf-tbody');
+                if (!players.length) {
+                    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No players match those thresholds</div></td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = players.map(p => `
+            <tr>
+                <td style="color:#aaa;font-size:0.75rem;">${p.NodeID ?? '—'}</td>
+                <td style="font-weight:500;">${p.Name ?? '—'}</td>
+                <td>${p.Sport ? `<span class="badge badge-blue">${p.Sport}</span>` : '—'}</td>
+                <td>${p.pts ?? '—'}</td>
+                <td>${p.reb ?? '—'}</td>
+                <td>${p.ast ?? '—'}</td>
+            </tr>
+        `).join('');
+            } catch (e) {
+                document.getElementById('perf-dot').className = 'dot red';
+                document.getElementById('perf-status').textContent = `Error: ${e.message}`;
+            }
+        }
+
+        async function loadTeamDropdown() {
+            try {
+                const res = await fetch(`${API}/teams`);
+                const teams = await res.json();
+                const select = document.getElementById('team-select');
+                teams.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.Name;
+                    opt.textContent = t.Name;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Could not load teams:', e);
+            }
+        }
+
+        async function loadInfluence() {
+            const team = document.getElementById('team-select').value;
+            if (!team) return;
+
+            document.getElementById('inf-dot').className = 'dot yellow';
+            document.getElementById('inf-status').textContent = `Loading roster for ${team}...`;
+
+            try {
+                const res = await fetch(`${API}/teams/${encodeURIComponent(team)}/players`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const players = await res.json();
+
+                document.getElementById('inf-dot').className = 'dot';
+                document.getElementById('inf-status').textContent = `${players.length} player(s) found for ${team}`;
+
+                const tbody = document.getElementById('inf-tbody');
+                if (!players.length) {
+                    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No players found for this team</div></td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = players.map(p => `
+            <tr>
+                <td style="color:#aaa;font-size:0.75rem;">${p.NodeID ?? '—'}</td>
+                <td style="font-weight:500;">${p.Name ?? '—'}</td>
+                <td>${p.Sport ? `<span class="badge badge-blue">${p.Sport}</span>` : '—'}</td>
+                <td>${p.pts ?? '—'}</td>
+                <td>${p.reb ?? '—'}</td>
+                <td>${p.ast ?? '—'}</td>
+            </tr>
+        `).join('');
+            } catch (e) {
+                document.getElementById('inf-dot').className = 'dot red';
+                document.getElementById('inf-status').textContent = `Error: ${e.message}`;
+            }
+        }
+
     </script>
 </body>
 
