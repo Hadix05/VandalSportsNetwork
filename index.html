@@ -394,11 +394,31 @@
 
         /* ── GRAPH BOX ── */
         #cy {
-            background: #fff;
+            background: #fafafa;
             border: 1px solid #e8e8e8;
             border-radius: 8px;
             width: 100%;
-            height: 480px;
+            height: 520px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #cy::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: radial-gradient(#e0e0e0 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #cy canvas {
+            position: relative;
+            z-index: 1;
         }
 
         /* ── ABOUT ── */
@@ -477,6 +497,8 @@
             }
         }
     </style>
+    <base target="_blank">
+    <base target="_blank">
 </head>
 
 <body>
@@ -566,17 +588,18 @@
                                 <div style="font-size:0.75rem;color:#888;margin-top:2px;">Players whose career stats
                                     exceed a set value</div>
                             </div>
-                            <span class="badge badge-amber">In progress</span>
+                            <span class="badge badge-green">Implemented</span>
                         </div>
                         <div
                             style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.4rem;">
                             <div>
-                                <div style="font-size:0.83rem;font-weight:500;">Query 3 — Top-League Influence Network
+                                <div style="font-size:0.83rem;font-weight:500;">Query 3 — Team Roster
                                 </div>
-                                <div style="font-size:0.75rem;color:#888;margin-top:2px;">Players connected to Tier 1
-                                    league competitors</div>
+                                <div style="font-size:0.75rem;color:#888;margin-top:2px;">All players belonging to a
+                                    search team
+                                </div>
                             </div>
-                            <span class="badge badge-amber">In progress</span>
+                            <span class="badge badge-green">Implemented</span>
                         </div>
                     </div>
                 </div>
@@ -831,10 +854,10 @@
                 <h4>Queries</h4>
                 <ul class="node-type-list">
                     <li><span>Query 1 — Teammate Network</span><span class="badge badge-green">Implemented</span></li>
-                    <li><span>Query 2 — Performance Threshold Filter</span><span class="badge badge-amber">In
-                            progress</span></li>
-                    <li><span>Query 3 — Top-League Influence Network</span><span class="badge badge-amber">In
-                            progress</span></li>
+                    <li><span>Query 2 — Performance Threshold Filter</span><span class="badge badge-green">Implemented
+                        </span></li>
+                    <li><span>Query 3 — Team Roster</span><span class="badge badge-green">Implemented
+                        </span></li>
                 </ul>
             </div>
         </div>
@@ -936,67 +959,246 @@
             // Look up the center player's name from the already-loaded players list
             const centerPlayer = allPlayers.find(p => (p.NodeID ?? p.nodeid) == playerId);
             const centerName = centerPlayer ? (centerPlayer.Name ?? centerPlayer.name) : `Player ${playerId}`;
+            const centerSport = centerPlayer ? (centerPlayer.Sport ?? centerPlayer.sport ?? '') : '';
 
+            // Color palette by sport
+            const sportColors = {
+                'NBA': '#1a5fa8',
+                'NFL': '#2d7a4f',
+                'MLB': '#7a5c2d',
+                'default': '#555'
+            };
+            const centerColor = sportColors[centerSport] || sportColors['default'];
+
+            // Build nodes: center + teammates
             const nodes = [
-                { data: { id: `p${playerId}`, label: centerName, type: 'center' } },
-                ...teammates.map(t => ({
+                {
                     data: {
-                        id: `p${t.NodeID ?? t.nodeid}`,
-                        label: t.Name ?? t.name,
-                        type: 'teammate'
+                        id: `p${playerId}`,
+                        label: centerName,
+                        type: 'center',
+                        sport: centerSport
                     }
-                }))
+                },
+                ...teammates.map(t => {
+                    const sport = t.Sport ?? t.sport ?? '';
+                    return {
+                        data: {
+                            id: `p${t.NodeID ?? t.nodeid}`,
+                            label: t.Name ?? t.name,
+                            type: 'teammate',
+                            sport: sport
+                        }
+                    };
+                })
             ];
 
+            // Build edges with weights for nicer layout
             const edges = teammates.map(t => ({
                 data: {
                     source: `p${playerId}`,
-                    target: `p${t.NodeID ?? t.nodeid}`
+                    target: `p${t.NodeID ?? t.nodeid}`,
+                    weight: 1
                 }
             }));
 
-            cytoscape({
+            // Destroy any previous instance
+            if (window.cyInstance) {
+                window.cyInstance.destroy();
+            }
+
+            window.cyInstance = cytoscape({
                 container: document.getElementById('cy'),
                 elements: { nodes, edges },
+                wheelSensitivity: 0.3,
+                minZoom: 0.3,
+                maxZoom: 3,
                 style: [
                     {
                         selector: 'node',
                         style: {
-                            'background-color': '#1a1a1a',
+                            'background-color': '#f0f0f0',
+                            'background-fill': 'solid',
+                            'border-width': 2,
+                            'border-color': '#ccc',
                             'label': 'data(label)',
-                            'color': '#1a1a1a',
-                            'font-size': '10px',
+                            'color': '#333',
+                            'font-size': '11px',
+                            'font-weight': '500',
                             'text-valign': 'bottom',
-                            'text-margin-y': '4px',
-                            'width': '28px',
-                            'height': '28px',
-                            'font-family': 'Inter, sans-serif'
+                            'text-halign': 'center',
+                            'text-margin-y': '6px',
+                            'width': '32px',
+                            'height': '32px',
+                            'font-family': 'Inter, sans-serif',
+                            'text-background-color': '#ffffff',
+                            'text-background-opacity': 0.85,
+                            'text-background-padding': '2px 4px',
+                            'text-background-shape': 'roundrectangle',
+                            'transition-property': 'background-color, border-color, width, height',
+                            'transition-duration': '0.2s'
                         }
                     },
                     {
                         selector: 'node[type="center"]',
                         style: {
-                            'background-color': '#1a5fa8',
-                            'width': '38px',
-                            'height': '38px',
-                            'font-weight': '600'
+                            'background-color': centerColor,
+                            'border-color': centerColor,
+                            'border-width': 3,
+                            'width': '48px',
+                            'height': '48px',
+                            'color': '#1a1a1a',
+                            'font-weight': '700',
+                            'font-size': '13px',
+                            'text-margin-y': '8px',
+                            'z-index': 10
                         }
+                    },
+                    {
+                        selector: 'node[type="teammate"]',
+                        style: {
+                            'background-color': '#fff',
+                            'border-width': 2,
+                            'border-color': '#d0d0d0',
+                            'width': '34px',
+                            'height': '34px'
+                        }
+                    },
+                    {
+                        selector: 'node[type="teammate"][sport="NBA"]',
+                        style: { 'border-color': '#1a5fa8', 'background-color': '#f0f6ff' }
+                    },
+                    {
+                        selector: 'node[type="teammate"][sport="NFL"]',
+                        style: { 'border-color': '#2d7a4f', 'background-color': '#f0faf5' }
+                    },
+                    {
+                        selector: 'node[type="teammate"][sport="MLB"]',
+                        style: { 'border-color': '#7a5c2d', 'background-color': '#faf6f0' }
                     },
                     {
                         selector: 'edge',
                         style: {
                             'width': 1.5,
-                            'line-color': '#e8e8e8',
-                            'curve-style': 'bezier'
+                            'line-color': '#d8d8d8',
+                            'curve-style': 'bezier',
+                            'target-arrow-shape': 'none',
+                            'opacity': 0.7
+                        }
+                    },
+                    {
+                        selector: 'edge[weight]',
+                        style: {
+                            'width': 'mapData(weight, 0, 5, 1, 4)'
+                        }
+                    },
+                    {
+                        selector: ':selected',
+                        style: {
+                            'background-color': '#1a1a1a',
+                            'border-color': '#1a1a1a',
+                            'line-color': '#1a1a1a',
+                            'opacity': 1,
+                            'width': '42px',
+                            'height': '42px'
+                        }
+                    },
+                    {
+                        selector: '.highlighted',
+                        style: {
+                            'background-color': '#1a1a1a',
+                            'border-color': '#1a1a1a',
+                            'color': '#1a1a1a',
+                            'font-weight': '700'
                         }
                     }
                 ],
-                layout: { name: 'cose', padding: 40, animate: true }
+                layout: {
+                    name: 'cose',
+                    padding: 50,
+                    animate: true,
+                    animationDuration: 600,
+                    fit: true,
+                    componentSpacing: 80,
+                    nodeRepulsion: 8000,
+                    edgeElasticity: 100,
+                    nestingFactor: 5,
+                    gravity: 0.25,
+                    numIter: 2500,
+                    initialTemp: 200,
+                    coolingFactor: 0.95,
+                    minTemp: 1.0,
+                    randomize: true
+                }
             });
+
+            // Add hover interactions
+            window.cyInstance.on('mouseover', 'node', function (evt) {
+                const node = evt.target;
+                node.animate({
+                    style: { 'width': '42px', 'height': '42px', 'border-width': 4 }
+                }, { duration: 150 });
+                document.getElementById('cy').style.cursor = 'pointer';
+            });
+
+            window.cyInstance.on('mouseout', 'node', function (evt) {
+                const node = evt.target;
+                const isCenter = node.data('type') === 'center';
+                node.animate({
+                    style: {
+                        'width': isCenter ? '48px' : '34px',
+                        'height': isCenter ? '48px' : '34px',
+                        'border-width': isCenter ? 3 : 2
+                    }
+                }, { duration: 150 });
+                document.getElementById('cy').style.cursor = 'default';
+            });
+
+            // Tap to highlight neighbors
+            window.cyInstance.on('tap', 'node', function (evt) {
+                const node = evt.target;
+                const neighborhood = node.neighborhood().add(node);
+                window.cyInstance.elements().addClass('faded');
+                neighborhood.removeClass('faded');
+            });
+
+            window.cyInstance.on('tap', function (evt) {
+                if (evt.target === window.cyInstance) {
+                    window.cyInstance.elements().removeClass('faded');
+                }
+            });
+
+            // Tap on teammate to load their network
+            window.cyInstance.on('tap', 'node[type="teammate"]', function (evt) {
+                const node = evt.target;
+                const teammateId = node.id().replace('p', '');
+                const teammateName = node.data('label');
+
+                // Update the input field
+                document.getElementById('tm-player-input').value = teammateId;
+
+                // Load the new teammate's network
+                loadTeammates();
+            });
+
+
+            // Add a subtle CSS class for faded state
+            if (!document.getElementById('cy-faded-style')) {
+                const style = document.createElement('style');
+                style.id = 'cy-faded-style';
+                style.textContent = `
+                    .faded { opacity: 0.15; transition: opacity 0.25s; }
+                `;
+                document.head.appendChild(style);
+            }
         }
 
         function clearGraph() {
             document.getElementById('tm-player-input').value = '';
+            if (window.cyInstance) {
+                window.cyInstance.destroy();
+                window.cyInstance = null;
+            }
             const cyDiv = document.getElementById('cy');
             cyDiv.innerHTML = '';
             cyDiv.style.display = '';
