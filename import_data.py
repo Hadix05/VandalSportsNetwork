@@ -1,5 +1,5 @@
 import csv
-from Python.db_python import connect_db
+from db_python import connect_db
 
 def import_nba_players(csv_file):
     cnx = connect_db()
