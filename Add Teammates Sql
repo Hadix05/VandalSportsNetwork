@@ -1,0 +1,12 @@
+INSERT INTO Edges (SourceNodeID, TargetNodeID, EdgeType)
+SELECT e1.SourceNodeID, e2.SourceNodeID, 'teammates_of'
+FROM Edges e1
+JOIN Edges e2
+  ON e1.TargetNodeID = e2.TargetNodeID
+JOIN Nodes p1 ON e1.SourceNodeID = p1.NodeID
+JOIN Nodes p2 ON e2.SourceNodeID = p2.NodeID
+WHERE e1.EdgeType = 'plays_for'
+  AND e2.EdgeType = 'plays_for'
+  AND p1.NodeType = 'Player'
+  AND p2.NodeType = 'Player'
+  AND e1.SourceNodeID < e2.SourceNodeID;
